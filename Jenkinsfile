@@ -1,4 +1,4 @@
-def registry = 'https://trialkub2kx.jfrog.io'
+def registry = 'https://trialzt2g9j.jfrog.io/'
 
 pipeline {                                    // 1  // Defines the start of the Jenkins pipeline block
 
@@ -60,7 +60,7 @@ pipeline {                                    // 1  // Defines the start of the 
                           "files": [
                             {
                               "pattern": "jarstaging/(*)",
-                              "target": "sai-libs-release-local/{1}",
+                              "target": "dnyanesh-repo-libs-release-local/{1}",
                               "flat": "false",
                               "props": "${properties}",
                               "exclusions": [ "*.sha1", "*.md5"]
