@@ -1,51 +1,66 @@
-pipeline {                                    // 1  // Defines the start of the Jenkins pipeline block
+pipeline {
 
-    agent any                                 // Specifies the pipeline can run on any available agent
+    agent any
 
-    environment {                             // 2  // Defines environment variables for the pipeline
-        PATH = "/opt/maven/bin:$PATH"         // Adds Maven's path to the system's PATH variable
-    }                                         // 2  // Ends the environment block
+    environment {
+        PATH = "/opt/maven/bin:$PATH"
+    }
 
-    stages {                                  // 3  // Defines the stages block where multiple stages are declared
-        
-        stage("build") {                      // 4  // Creates a stage named 'build'
-            steps {                           // 5  // Defines the steps that will be executed in this stage
-                echo "----------- build started ----------"  
-                                              // Logs a message indicating the start of the build
-                sh 'mvn clean deploy -Dmaven.test.skip=true'  
-                                              // Runs Maven clean and deploy commands, skipping tests
-                echo "----------- build completed ----------"  
-                                              // Logs a message indicating the build completion
-            }                                 // 5  // Ends the steps block for 'build' stage
-        }                                     // 4  // Ends the 'build' stage
+    stages {
 
-        stage("test") {                       // 6  // Creates a stage named 'test'
-            steps {                           // 7  // Defines the steps that will be executed in this stage
-                echo "----------- unit test started ----------"  
-                                              // Logs a message indicating the start of unit tests
-                sh 'mvn surefire-report:report'  
-                                              // Runs the Maven Surefire report to execute unit tests
-                echo "----------- unit test completed ----------"  
-                                              // Logs a message indicating unit test completion
-            }                                 // 7  // Ends the steps block for 'test' stage
-        }                                     // 6  // Ends the 'test' stage
+        stage("build") {
+            steps {
+                echo "----------- build started ----------"
+                sh 'mvn clean deploy -Dmaven.test.skip=true'
+                echo "----------- build completed ----------"
+            }
+        }
 
-        stage('SonarQube analysis') {         // 8  // Creates a stage named 'SonarQube analysis'
-            environment {                     // 9  // Defines environment variables specific to this stage
-                scannerHome = tool 'dnyanesh_Sonar_Scanner'  
-                                              // Sets the SonarQube scanner tool
-            }                                 // 9  // Ends the environment block for this stage
+        stage("test") {
+            steps {
+                echo "----------- unit test started ----------"
+                sh 'mvn surefire-report:report'
+                echo "----------- unit test completed ----------"
+            }
+        }
 
-            steps {                           // 10  // Defines the steps that will be executed in this stage
+        stage('SonarQube analysis') {
+            environment {
+                scannerHome = tool 'dnyanesh_Sonar_Scanner'
+            }
+
+            steps {
                 withSonarQubeEnv('dnyanesh_SonarQube_Server') {
-                                              // Executes the SonarQube analysis within the SonarQube environment
-                    sh "${scannerHome}/bin/sonar-scanner"  
-                                              // Runs the SonarQube scanner tool
-                }                             // Ends the withSonarQubeEnv block
-            }                                 // 10  // Ends the steps block for 'SonarQube analysis' stage
-        }                                     // 8  // Ends the 'SonarQube analysis' stage
+                    sh "${scannerHome}/bin/sonar-scanner"
+                }
+            }
+        }
 
-      
-    } 
-}
+        stage("Jar Publish") {
+            steps {
+                script {
+                    echo '<--------------- Jar Publish Started --------------->'
+                    def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "artifact-cred"
+                    def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"
+                    def uploadSpec = """{
+                          "files": [
+                            {
+                              "pattern": "jarstaging/(*)",
+                              "target": "dnyanesh-repo-libs-release-local/{1}",
+                              "flat": "false",
+                              "props": "${properties}",
+                              "exclusions": [ "*.sha1", "*.md5"]
+                            }
+                         ]
+                     }"""
+                    def buildInfo = server.upload(uploadSpec)
+                    buildInfo.env.collect()
+                    server.publishBuildInfo(buildInfo)
+                    echo '<--------------- Jar Publish Ended --------------->'
+                }
+            }
+        } // <-- This ends the "Jar Publish" stage
 
+    } // <-- This was missing: it ends the "stages" block
+
+} // <-- Ends the pipeline block
