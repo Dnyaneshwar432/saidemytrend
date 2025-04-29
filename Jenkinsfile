@@ -37,12 +37,15 @@ pipeline {
             }
         }
 
-        stage("Jar Publish") {
-            steps {
-                script {
-                    echo '<--------------- Jar Publish Started --------------->'
-                    def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "artifact-cred"
-                    def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"
+         stage("Jar Publish") {                // 14  // Creates a stage named 'Jar Publish'
+            steps {                           // 15  // Defines the steps that will be executed in this stage
+                script {                      // 16  // Allows running custom Groovy script inside the pipeline
+                    echo '<--------------- Jar Publish Started --------------->'  
+                                              // Logs a message indicating the start of JAR publishing
+                    def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "artifact-cred"  
+                                              // Defines the Artifactory server with the specified URL and credentials
+                    def properties = "buildid=${env.BUILD_ID},commitid=${GIT_COMMIT}"  
+                                              // Sets properties like build ID and Git commit ID for the build
                     def uploadSpec = """{
                           "files": [
                             {
@@ -53,14 +56,19 @@ pipeline {
                               "exclusions": [ "*.sha1", "*.md5"]
                             }
                          ]
-                     }"""
-                    def buildInfo = server.upload(uploadSpec)
-                    buildInfo.env.collect()
-                    server.publishBuildInfo(buildInfo)
-                    echo '<--------------- Jar Publish Ended --------------->'
-                }
-            }
-        } // <-- This ends the "Jar Publish" stage
+                     }"""  
+                                              // Defines the upload specification for uploading JAR files to Artifactory
+                    def buildInfo = server.upload(uploadSpec)  
+                                              // Uploads the files to Artifactory and collects build info
+                    buildInfo.env.collect()  
+                                              // Collects environment variables as part of the build info
+                    server.publishBuildInfo(buildInfo)  
+                                              // Publishes the build information to Artifactory
+                    echo '<--------------- Jar Publish Ended --------------->'  
+                                              // Logs a message indicating the end of JAR publishing
+                }                             // 16  // Ends the script block for 'Jar Publish' stage
+            }                                 // 15  // Ends the steps block for 'Jar Publish' stage
+        }     
 
     } // <-- This was missing: it ends the "stages" block
 
